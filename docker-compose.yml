@@ -1,0 +1,56 @@
+version: '3.8'
+services:
+  redis-master:
+    image: redis:7.4.0-alpine
+    container_name: redis-master
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./configs/redis.master.conf:/usr/local/etc/redis/redis.conf
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+
+  redis-slave1:
+    image: redis:7.4.0-alpine
+    container_name: redis-slave1
+    ports:
+      - "6380:6379"
+    volumes:
+      - ./configs/redis.slave.conf:/usr/local/etc/redis/redis.conf
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+
+  redis-slave2:
+    image: redis:7.4.0-alpine
+    container_name: redis-slave2
+    ports:
+      - "6381:6379"
+    volumes:
+      - ./configs/redis.slave.conf:/usr/local/etc/redis/redis.conf
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+
+  sentinel:
+    image: redis:7.4.0-alpine
+    depends_on:
+      - redis-master
+      - redis-slave1
+      - redis-slave2
+    container_name: redis-sentinel
+    ports:
+      - "23679:23679"
+    volumes:
+      - ./configs:/usr/local/etc/redis/configs
+    command: [ "redis-sentinel", "/usr/local/etc/redis/configs/redis.sentinel.conf" ]
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+  backend:
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
