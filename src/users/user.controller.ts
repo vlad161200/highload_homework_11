@@ -12,6 +12,6 @@ export class UserController {
 
   @Post()
   async create() {
-    return this.userService.create();
+    // return this.userService.create();
   }
 }

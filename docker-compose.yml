@@ -1,56 +1,88 @@
 version: '3.8'
+
 services:
-  redis-master:
-    image: redis:7.4.0-alpine
-    container_name: redis-master
+  redis_1:
+    image: redis:7.4.0
+    restart: always
+    container_name: redis_1
     ports:
       - "6379:6379"
     volumes:
-      - ./configs/redis.master.conf:/usr/local/etc/redis/redis.conf
-    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
-    environment:
-      - ALLOW_EMPTY_PASSWORD=yes
-
-  redis-slave1:
-    image: redis:7.4.0-alpine
-    container_name: redis-slave1
+      - ./configs/redis.conf:/usr/local/etc/redis/redis.conf
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+  redis_2:
+    image: redis:7.4.0
+    restart: always
+    container_name: redis_2
     ports:
-      - "6380:6379"
+      - "6378:6379"
     volumes:
-      - ./configs/redis.slave.conf:/usr/local/etc/redis/redis.conf
+      - ./configs/redis.conf:/usr/local/etc/redis/redis.conf
     command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
-    environment:
-      - ALLOW_EMPTY_PASSWORD=yes
-
-  redis-slave2:
-    image: redis:7.4.0-alpine
-    container_name: redis-slave2
+  redis_3:
+    image: redis:7.4.0
+    restart: always
+    container_name: redis_3
     ports:
-      - "6381:6379"
+      - "6377:6379"
     volumes:
-      - ./configs/redis.slave.conf:/usr/local/etc/redis/redis.conf
+      - ./configs/redis.conf:/usr/local/etc/redis/redis.conf
     command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
-    environment:
-      - ALLOW_EMPTY_PASSWORD=yes
-
-  sentinel:
-    image: redis:7.4.0-alpine
+  redis_4:
+    image: redis:7.4.0
+    restart: always
+    container_name: redis_4
+    ports:
+      - "6376:6379"
+    volumes:
+      - ./configs/redis.conf:/usr/local/etc/redis/redis.conf
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+  redis_5:
+    image: redis:7.4.0
+    restart: always
+    container_name: redis_5
+    ports:
+      - "6375:6379"
+    volumes:
+      - ./configs/redis.conf:/usr/local/etc/redis/redis.conf
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+  redis_6:
+    image: redis:7.4.0
+    restart: always
+    container_name: redis_6
+    ports:
+      - "6374:6379"
+    volumes:
+      - ./configs/redis.conf:/usr/local/etc/redis/redis.conf
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+  redis-cluster-setup:
+    image: redis:7.4.0
+    container_name: redis-cluster-setup
     depends_on:
-      - redis-master
-      - redis-slave1
-      - redis-slave2
-    container_name: redis-sentinel
-    ports:
-      - "23679:23679"
-    volumes:
-      - ./configs:/usr/local/etc/redis/configs
-    command: [ "redis-sentinel", "/usr/local/etc/redis/configs/redis.sentinel.conf" ]
-    environment:
-      - ALLOW_EMPTY_PASSWORD=yes
+      - redis_1
+      - redis_2
+      - redis_3
+      - redis_4
+      - redis_5
+      - redis_6
+    entrypoint: |
+      sh -c '
+        echo "Waiting for Redis servers to start...";
+        sleep 10;
+        echo "Creating Redis Cluster...";
+        echo "yes" | redis-cli --cluster create redis_1:6379 redis_2:6379 redis_3:6379 redis_4:6379 redis_5:6379 redis_6:6379 --cluster-replicas 1
+        echo "Cluster created successfully.";
+      '
   backend:
     restart: always
     build:
       context: .
       dockerfile: Dockerfile
+    entrypoint: |
+      sh -c '
+        echo "Waiting for Redis servers to start...";
+        sleep 20;
+        npm run start:prod
+      '
     ports:
       - '3000:3000'
